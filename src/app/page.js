@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Loader from '../components/Loader'
-import {createRoom,joinRoom} from "../app/api-caller"
+import {gameService} from "../app/api-caller"
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -30,8 +30,8 @@ export default function LoginPage() {
     localStorage.setItem("username", username.trim());
     
     setLoading(e=>({...e,create:true}));
-    const newRoomId = await createRoom();
-
+    const newRoomId = await gameService.createRoom();
+    localStorage.setItem("isRoomCreator", "true");
 
     // Slight delay to allow loading spinner to render
     setTimeout(() => {
@@ -53,7 +53,7 @@ export default function LoginPage() {
 
     // In real app, validate room exists via API here before navigating
     setLoading(e=>({...e,join:true}))
-    const response = await joinRoom(joinRoomId);
+    const response = await gameService.joinRoom(joinRoomId);
     router.push(`/game/${joinRoomId.trim()}`);
   }
 
@@ -141,7 +141,7 @@ export default function LoginPage() {
             type="text"
             placeholder="Enter Room ID"
             value={joinRoomId}
-            onChange={(e) => setJoinRoomId(e.target.value.toUpperCase())}
+            onChange={(e) => setJoinRoomId(e.target.value)}
             style={{
               width: "100%",
               padding: 10,
@@ -150,7 +150,6 @@ export default function LoginPage() {
               fontSize: 16,
               borderRadius: 4,
               border: "1px solid #999",
-              textTransform: "uppercase",
               letterSpacing: 2,
             }}
           />

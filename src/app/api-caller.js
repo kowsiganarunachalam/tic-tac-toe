@@ -1,41 +1,133 @@
-const API_BASE = 'http://localhost:5054/api/game';
+import { HubConnectionBuilder, HubConnectionState } from "@microsoft/signalr";
 
-async function apiRequest(endpoint, method = 'GET', data = null) {
-  const config = {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials:"include"
-  };
-
-  if (data) {
-    config.body = JSON.stringify(data);
+class GameService {
+  constructor() {
+    this.connection = null;
+    this.eventHandlers = {};
+    this.roomId = null;
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, config);
+  async connectSignalR() {
+    // If already connected, skip setup
+    if (this.connection) {
+      if (this.connection.state === HubConnectionState.Connected) {
+        return;
+      }
+    }else{
+      // Build new connection
+      this.connection = new HubConnectionBuilder()
+        .withUrl("http://localhost:5054/gamehub")
+        .withAutomaticReconnect()
+        .build();
+      // Attempt to start the connection
+      await this.connection.start();
+    }
 
-  if (!response.ok) {
-    const errData = await response.json().catch(() => ({}));
-    throw new Error(`Error ${response.status}: ${errData.message || 'Unknown error'}`);
+    // If reconnecting, wait until reconnection completes
+    if (this.connection) {
+      if (this.connection.state === HubConnectionState.Reconnecting) {
+        while (this.connection.state === HubConnectionState.Reconnecting) {
+          await new Promise((res) => setTimeout(res, 100));
+        }
+
+        // If reconnected successfully, continue
+        if (this.connection.state === HubConnectionState.Connected) return;
+      }
+    }
+    
+    // Setup lifecycle handlers
+    this.connection.onclose((error) => {
+      console.log("SignalR connection closed.", error);
+      this.eventHandlers["ConnectionClosed"]?.(error);
+    });
+
+    this.connection.onreconnecting((error) => {
+      console.log("SignalR reconnecting...", error);
+      this.eventHandlers["ConnectionReconnecting"]?.(error);
+    });
+
+    this.connection.onreconnected((connectionId) => {
+      console.log("SignalR reconnected!", connectionId);
+      this.eventHandlers["ConnectionReconnected"]?.(connectionId);
+    });
+
+    // Wire up game-specific events
+    this.connection.on("RoomCreated", (newRoomId) => {
+      this.eventHandlers["RoomCreated"]?.(newRoomId);
+      this.roomId = newRoomId;
+    });
+
+    this.connection.on("StartGame", (newRoomId,game) => {
+      this.eventHandlers["StartGame"]?.({newRoomId,game});
+      this.roomId = newRoomId;
+    });
+
+    this.connection.on("PlayerJoined", () => {
+      this.eventHandlers["PlayerJoined"]?.();
+    });
+
+    this.connection.on("ReceiveMove", (data) => {
+      this.eventHandlers["ReceiveMove"]?.(data);
+    });
+
+    this.connection.on("GameOver", (winner) => {
+      this.eventHandlers["GameOver"]?.(winner);
+    });
+
+    this.connection.on("Error", (msg) => {
+      this.eventHandlers["Error"]?.(msg);
+      console.error(msg);
+    });
+
+    
+
+    if (this.connection.state !== HubConnectionState.Connected) {
+      throw new Error("SignalR failed to connect.");
+    }
   }
-  var room=await response.json();
-  console.log(room);
-  return room.roomId;
+
+
+  async createRoom() {
+    await this.connectSignalR();
+
+    if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
+      throw new Error("SignalR is not connected.");
+    }
+
+    this.roomId = await this.connection.invoke("CreateRoom");
+    return this.roomId;
+  }
+
+  async joinRoom(roomId) {
+    await this.connectSignalR();
+
+    if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
+      throw new Error("SignalR is not connected.");
+    }
+
+    await this.connection.invoke("JoinRoom", roomId);
+  }
+
+  async move(player, row, col) {
+    if (!this.roomId) throw new Error("Join or create a room first.");
+
+    if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
+      throw new Error("Cannot send move: SignalR is not connected.");
+    }
+
+    await this.connection.invoke("MakeMove", this.roomId, row, col,player);
+  }
+
+  on(eventName, callback) {
+    this.eventHandlers[eventName] = callback;
+  }
+
+  async disconnect() {
+    if (this.connection) {
+      await this.connection.stop();
+      this.connection = null;
+    }
+  }
 }
 
-export async function createRoom()
-{
-  return await apiRequest("/create-room","POST");
-}
-
-export async function joinRoom(roomId)
-{
-  return await apiRequest("/join-room","POST",{"roomId":roomId});
-}
-
-export async function move(player,roomId,row,col)
-{
-  return await apiRequest("/move","POST",{"Player":player,"RoomId":roomId,"Row":row,"Col":col});
-}
-
+export const gameService = new GameService();

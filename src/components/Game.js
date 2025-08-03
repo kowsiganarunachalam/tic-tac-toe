@@ -1,33 +1,110 @@
-// components/Game.js
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Grid from "./Grid";
+import { gameService } from "../../src/app/api-caller"; // import your service
 
-export default function Game() {
+export default function Game({  roomId } ) {
   const [tiles, setTiles] = useState(Array(9).fill(""));
   const [turn, setTurn] = useState("X");
+  const [player, setPlayer] = useState("X"); // optionally track your player symbol
+  const [status, setStatus] = useState("");
+  const isRoomCreator = localStorage.getItem("isRoomCreator") === "true";
+  console.log(isRoomCreator);
+  useEffect(() => {
+    async function setup() {
+      try {
+        if (roomId) {
+          if (isRoomCreator) {
+            // Created room, so no joinRoom call
+            setStatus(`Room created: ${roomId}, waiting for player 2...`);
+          } else {
+            // Join existing room only if not creator
+            await gameService.joinRoom(roomId);
+            setStatus(`Joined room ${roomId}`);
+          }
+        } else {
+          // No roomId, create new room (if this case happens)
+          const newRoomId = await gameService.createRoom();
+          setStatus(`Room created: ${newRoomId}, waiting for player 2...`);
+        }
 
-  function handleTileClick(index) {
+        // Subscribe to SignalR events
+        gameService.on("RoomCreated", (newRoomId) => {
+          setStatus(`Room created: ${newRoomId}`);
+          console.log(newRoomId);
+          // Save roomId to state if you want to display or use it
+        });
+
+        gameService.on("PlayerJoined", () => {
+          setStatus("Second player joined, game start!");
+        });
+
+        gameService.on("ReceiveMove", ({ player: movedPlayer, row, col, nextTurn }) => {
+          setTiles(prev => {
+            const updated = [...prev];
+            const index = row * 3 + col;
+            updated[index] = movedPlayer;
+            return updated;
+          });
+          setTurn(nextTurn);
+        });
+
+        gameService.on("GameOver", (winner) => {
+          setStatus(winner ? `Player ${winner} wins!` : "Game ended in a draw.");
+        });
+
+        gameService.on("Error", (message) => {
+          setStatus(`Error: ${message}`);
+        });
+        gameService.on("ConnectionReconnecting", () => {
+          setStatus("Connection lost, trying to reconnect...");
+        });
+
+        gameService.on("ConnectionReconnected", () => {
+          setStatus("Reconnected to server.");
+        });
+
+        gameService.on("ConnectionClosed", (error) => {
+          setStatus("Disconnected from server.");
+          console.error("Connection closed:", error);
+        });
+      } catch (error) {
+        console.log(error);
+        setStatus(`Setup error: ${error.message}`);
+      }
+    }
+
+    setup();
+
+  }, [roomId]);
+
+  async function handleTileClick(index) {
+    const row = Math.floor(index / 3);
+    const col = index % 3;
+
     if (tiles[index] !== "") return;
-
-    const updatedTiles = [...tiles];
-    updatedTiles[index] = turn;
-    setTiles(updatedTiles);
-    setTurn(turn === "X" ? "O" : "X");
+    console.log(tiles);
+    try {
+      await gameService.move(player, row, col);
+    } catch (err) {
+      console.error(err);
+      setStatus(`Move failed: ${err.message}`);
+    }
   }
 
   return (
     <div
       style={{
         display: "flex",
-        justifyContent: "center", // horizontal center
-        alignItems: "center",     // vertical center
-        height: "100vh",          // full height viewport
-        flexDirection: "column",  // stack children vertically
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+        flexDirection: "column",
       }}
     >
-      <h2>Turn: {turn}</h2>
+      <h2>{status}</h2>
+      <h3>Turn: {turn}</h3>
       <Grid tiles={tiles} onTileClick={handleTileClick} />
     </div>
   );
