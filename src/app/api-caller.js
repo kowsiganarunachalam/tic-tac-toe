@@ -76,9 +76,12 @@ class GameService {
 
     this.connection.on("Error", (msg) => {
       this.eventHandlers["Error"]?.(msg);
-      console.error(msg);
+      //console.error(msg);
     });
-
+    this.connection.on("Alert", (type,msg) => {
+      this.eventHandlers["Alert"]?.(type,msg);
+      //console.error(msg);
+    });
     
 
     if (this.connection.state !== HubConnectionState.Connected) {

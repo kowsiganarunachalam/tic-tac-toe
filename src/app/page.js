@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Loader from '../components/Loader'
 import {gameService} from "../app/api-caller"
@@ -13,12 +13,19 @@ export default function LoginPage() {
     create:false,
     join:false
   });
+
   const [hoverState, setHoverState] = useState({
     create: false,
     join: false,
     joinstart:false,
     joincancel:false
   });
+
+  useEffect(() => {
+    localStorage.clear();
+  }, []);
+
+
   const router = useRouter();
 
   async function handleCreateRoom() {
