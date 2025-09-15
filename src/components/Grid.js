@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import Tile from "./Tile"
 
-export default function Grid({ tiles, onTileClick }) {
+export default function Grid({ tiles, onTileClick,player }) {
     return (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 100px)", gap: "4px" }}>
             {
@@ -15,6 +15,7 @@ export default function Grid({ tiles, onTileClick }) {
                             id={`${row},${col}`}  // <-- Add matrix-style ID here
                             value={value}
                             onClick={() => onTileClick(index)}
+                            player={player}
                         />
                     );
                 })

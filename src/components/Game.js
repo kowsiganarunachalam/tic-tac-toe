@@ -3,14 +3,17 @@
 import React, { useEffect, useState } from "react";
 import Grid from "./Grid";
 import { gameService } from "../../src/app/api-caller"; // import your service
+import Popup from "./Popup";
 
 export default function Game({  roomId } ) {
   const [tiles, setTiles] = useState(Array(9).fill(""));
   const [turn, setTurn] = useState("X");
   const [player, setPlayer] = useState("X"); // optionally track your player symbol
   const [status, setStatus] = useState("");
+  const [alert, setAlert] = useState("");
+  const [type, setType] = useState("");
   const isRoomCreator = localStorage.getItem("isRoomCreator") === "true";
-  console.log(isRoomCreator);
+  //console.log(isRoomCreator);
   useEffect(() => {
     async function setup() {
       try {
@@ -25,8 +28,8 @@ export default function Game({  roomId } ) {
           }
         } else {
           // No roomId, create new room (if this case happens)
-          const newRoomId = await gameService.createRoom();
-          setStatus(`Room created: ${newRoomId}, waiting for player 2...`);
+          // const newRoomId = await gameService.createRoom();
+          // setStatus(`Room created: ${newRoomId}, waiting for player 2...`);
         }
 
         // Subscribe to SignalR events
@@ -36,7 +39,7 @@ export default function Game({  roomId } ) {
           // Save roomId to state if you want to display or use it
         });
 
-        gameService.on("PlayerJoined", () => {
+        gameService.on("StartGame", () => {
           setStatus("Second player joined, game start!");
         });
 
@@ -45,17 +48,28 @@ export default function Game({  roomId } ) {
             const updated = [...prev];
             const index = row * 3 + col;
             updated[index] = movedPlayer;
+            setPlayer(nextTurn);
             return updated;
           });
           setTurn(nextTurn);
         });
 
-        gameService.on("GameOver", (winner) => {
-          setStatus(winner ? `Player ${winner} wins!` : "Game ended in a draw.");
+        gameService.on("GameOver", ({ player:movedPlayer, row, col, nextTurn }) => {
+          setTiles(prev => {
+            const updated = [...prev];
+            const index = row * 3 + col;
+            updated[index] = movedPlayer;
+            return updated;
+          });
+          setStatus(movedPlayer ? `Player ${movedPlayer} wins!` : "Game ended in a draw.");
         });
 
         gameService.on("Error", (message) => {
-          setStatus(`Error: ${message}`);
+          setAlert(message);
+        });
+        gameService.on("Alert", (type,message) => {
+          setAlert(message);
+          setType(type);
         });
         gameService.on("ConnectionReconnecting", () => {
           setStatus("Connection lost, trying to reconnect...");
@@ -70,21 +84,21 @@ export default function Game({  roomId } ) {
           console.error("Connection closed:", error);
         });
       } catch (error) {
-        console.log(error);
+        //console.log(error);
         setStatus(`Setup error: ${error.message}`);
       }
     }
 
     setup();
 
-  }, [roomId]);
+  }, [isRoomCreator, roomId]);
 
   async function handleTileClick(index) {
     const row = Math.floor(index / 3);
     const col = index % 3;
 
     if (tiles[index] !== "") return;
-    console.log(tiles);
+    //console.log(tiles);
     try {
       await gameService.move(player, row, col);
     } catch (err) {
@@ -105,7 +119,9 @@ export default function Game({  roomId } ) {
     >
       <h2>{status}</h2>
       <h3>Turn: {turn}</h3>
-      <Grid tiles={tiles} onTileClick={handleTileClick} />
+      <Grid tiles={tiles} onTileClick={handleTileClick} player={player} />
+      {alert && (<Popup message={alert} type={type} onClose={()=>setAlert(null)}></Popup>)}
+     
     </div>
   );
 }
