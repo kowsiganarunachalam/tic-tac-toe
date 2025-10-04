@@ -5,6 +5,7 @@ class GameService {
     this.connection = null;
     this.eventHandlers = {};
     this.roomId = null;
+    this.rooms={};
   }
 
   async connectSignalR() {
@@ -52,13 +53,16 @@ class GameService {
     });
 
     // Wire up game-specific events
-    this.connection.on("RoomCreated", (newRoomId) => {
-      this.eventHandlers["RoomCreated"]?.(newRoomId);
+    this.connection.on("RoomCreated", (newRoomId,firstPlayer) => {
+      console.log(newRoomId,firstPlayer);
+      this.eventHandlers["RoomCreated"]?.(newRoomId,firstPlayer);
       this.roomId = newRoomId;
+      this.rooms[newRoomId]={firstPlayer:firstPlayer,secondPlayer:null};
     });
 
-    this.connection.on("StartGame", (newRoomId,game) => {
-      this.eventHandlers["StartGame"]?.({newRoomId,game});
+    this.connection.on("StartGame", (newRoomId,firstPlayer,secondPlayer) => {
+      this.eventHandlers["StartGame"]?.(newRoomId,firstPlayer,secondPlayer);
+      this.rooms[newRoomId]={firstPlayer:firstPlayer,secondPlayer:secondPlayer};
       this.roomId = newRoomId;
     });
 
@@ -90,25 +94,26 @@ class GameService {
   }
 
 
-  async createRoom() {
+  async createRoom(username) {
     await this.connectSignalR();
 
     if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
       throw new Error("SignalR is not connected.");
     }
 
-    this.roomId = await this.connection.invoke("CreateRoom");
+    this.roomId = await this.connection.invoke("CreateRoom",username);
     return this.roomId;
   }
 
-  async joinRoom(roomId) {
+  async joinRoom(roomId,username) {
     await this.connectSignalR();
 
     if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
       throw new Error("SignalR is not connected.");
     }
 
-    await this.connection.invoke("JoinRoom", roomId);
+    var _=await this.connection.invoke("JoinRoom", roomId,username);
+    console.log(this.rooms);
   }
 
   async move(player, row, col) {
@@ -130,6 +135,10 @@ class GameService {
       await this.connection.stop();
       this.connection = null;
     }
+  }
+
+  getPlayers(roomId){
+    return this.rooms[roomId];
   }
 }
 

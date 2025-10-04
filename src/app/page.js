@@ -22,7 +22,9 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    localStorage.clear();
+    // If you want to reset only certain values:
+    localStorage.removeItem("isRoomCreator");
+    localStorage.removeItem("roomId");
   }, []);
 
 
@@ -37,7 +39,7 @@ export default function LoginPage() {
     localStorage.setItem("username", username.trim());
     
     setLoading(e=>({...e,create:true}));
-    const newRoomId = await gameService.createRoom();
+    const newRoomId = await gameService.createRoom(username.trim());
     localStorage.setItem("isRoomCreator", "true");
 
     // Slight delay to allow loading spinner to render
@@ -60,7 +62,7 @@ export default function LoginPage() {
 
     // In real app, validate room exists via API here before navigating
     setLoading(e=>({...e,join:true}))
-    const response = await gameService.joinRoom(joinRoomId);
+    const response = await gameService.joinRoom(joinRoomId,username.trim());
     router.push(`/game/${joinRoomId.trim()}`);
   }
 
