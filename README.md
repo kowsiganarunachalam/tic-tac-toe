@@ -1,40 +1,53 @@
+# Tic-Tac-Toe (Frontend)
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+Real-time multiplayer tic-tac-toe built with **Next.js 15**, **React 19**, and the **SignalR JavaScript client**. Create a room, share the 6-character code with a friend, and play live — every move syncs instantly over WebSockets.
 
-## Getting Started
+Backend repo: [tic-tac-toe-api](https://github.com/kowsiganarunachalam/tic-tac-toe-api) (ASP.NET Core + SignalR)
 
-First, run the development server:
+<!-- TODO: add a gameplay GIF or screenshot here — this is the single highest-impact thing you can add -->
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Features
+
+- Room-based matchmaking with shareable short codes
+- Real-time board sync via SignalR (`@microsoft/signalr`) with automatic reconnection handling
+- Dynamic room routes using the Next.js App Router (`/game/[roomId]`)
+- Win / draw detection reflected instantly on both clients
+- Styled with Tailwind CSS and styled-components
+
+## Tech stack
+
+- Next.js 15 (App Router, Turbopack dev server)
+- React 19
+- @microsoft/signalr for real-time communication
+- Tailwind CSS 4 + styled-components
+
+## Architecture
+
+`src/app/api-caller.js` wraps the SignalR connection in a `GameService` singleton that manages the connection lifecycle (connect, reconnect, close), registers server event handlers (`RoomCreated`, `PlayerJoined`, board updates), and exposes game actions (`CreateRoom`, `JoinRoom`, `MakeMove`) to the React components.
+
+```
+src/
+├── app/
+│   ├── page.js              # Landing: create or join a room
+│   ├── game/[roomId]/       # Game screen (dynamic route per room)
+│   └── api-caller.js        # SignalR GameService (connection + events)
+└── components/
+    ├── Game.js              # Game orchestration
+    ├── Grid.js / Tile.js    # Board rendering
+    ├── PlayerSquare.js      # Player info display
+    ├── Popup.js             # Win / draw / rematch dialogs
+    └── Loader.js            # Connection states
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Running locally
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+Prerequisites: Node.js 18+, and the [backend API](https://github.com/kowsiganarunachalam/tic-tac-toe-api) running on `http://localhost:5054`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+git clone https://github.com/kowsiganarunachalam/tic-tac-toe.git
+cd tic-tac-toe
+npm install
+npm run dev
+```
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-# tic-tac-toe
-Just a tic tac toe game
+Open [http://localhost:3000](http://localhost:3000), create a room in one tab, and join with the code from a second tab (or another device) to play.
