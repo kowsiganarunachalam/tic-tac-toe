@@ -132,7 +132,7 @@ export default function Game({  roomId } ) {
       alignItems:"center",
       flexDirection:"row"
     }}>
-    <PlayerSquare name={firstPlayer} active={firstPlayerActive}/>
+    <PlayerSquare name={firstPlayer} active={firstPlayerActive} onTimeout={async ()=>await gameService.autoMove(roomId,player)}/>
     <div
       style={{
         display: "flex",
@@ -148,7 +148,7 @@ export default function Game({  roomId } ) {
       {alert && (<Popup message={alert} type={type} onClose={()=>setAlert(null)}></Popup>)}
      
     </div>
-    <PlayerSquare name={secondPlayer} active={secondPlayerActive}/>
+    <PlayerSquare name={secondPlayer} active={secondPlayerActive} onTimeout={async ()=>await gameService.autoMove(roomId,player)}/>
     </div>
   );
 }

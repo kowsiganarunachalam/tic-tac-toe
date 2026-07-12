@@ -16,8 +16,9 @@ class GameService {
       }
     }else{
       // Build new connection
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5054";
       this.connection = new HubConnectionBuilder()
-        .withUrl("http://localhost:5054/gamehub")
+        .withUrl(`${apiUrl}/gamehub`)
         .withAutomaticReconnect()
         .build();
       // Attempt to start the connection
@@ -124,6 +125,16 @@ class GameService {
     }
 
     await this.connection.invoke("MakeMove", this.roomId, row, col,player);
+  }
+
+  async autoMove(roomId,player){
+    if (!this.roomId) throw new Error("Join or create a room first.");
+
+    if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
+      throw new Error("Cannot send move: SignalR is not connected.");
+    }
+
+    await this.connection.invoke("AutoMoveIfNotChose", roomId,player);
   }
 
   on(eventName, callback) {
