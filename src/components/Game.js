@@ -64,17 +64,15 @@ export default function Game({  roomId } ) {
 
     setIsCreatingReplay(true);
     try {
-      const newRoomId = await gameService.createRoom(username);
-      localStorage.setItem("isRoomCreator", "true");
-      localStorage.setItem("roomId", newRoomId);
-      router.push(`/game/${newRoomId}`);
+      await gameService.playAgain(roomId);
+      setStatus("Waiting for the next round...");
     } catch (error) {
       setAlert(`Could not start a new game: ${error.message}`);
       setType("Error");
     } finally {
       setIsCreatingReplay(false);
     }
-  }, [goHome, router]);
+  }, [goHome, roomId]);
 
   const handleTimeout = useCallback(async (timedOutPlayer) => {
     if (gameOverRef.current) return;
@@ -107,10 +105,7 @@ export default function Game({  roomId } ) {
             // Created room, so no joinRoom call
             setStatus(`Room created: ${roomId}, waiting for player 2...`);
           } else {
-            // Join existing room only if not creator
-            await gameService.joinRoom(roomId);
-            setStatus(`Joined room ${roomId}`);
-            setFirstPlayerActive(true);
+            setStatus(`Joining room ${roomId}...`);
           }
         } else {
           // No roomId, create new room (if this case happens)
@@ -130,6 +125,7 @@ export default function Game({  roomId } ) {
 
         gameService.on("StartGame", (roomId,firstPlayer,secondPlayer) => {
           setStatus("Second player joined, game start!");
+          setTiles(Array(9).fill(""));
           setFirstPlayer(firstPlayer);
           setSecondPlayer(secondPlayer);
           setGameOver(false);
@@ -197,6 +193,13 @@ export default function Game({  roomId } ) {
           setStatus("Disconnected from server.");
           console.error("Connection closed:", error);
         });
+
+        if (roomId && !isRoomCreator) {
+          const username = localStorage.getItem("username");
+
+          await gameService.joinRoom(roomId, username);
+          setStatus(`Joined room ${roomId}, waiting for game start...`);
+        }
       } catch (error) {
         //console.log(error);
         setStatus(`Setup error: ${error.message}`);

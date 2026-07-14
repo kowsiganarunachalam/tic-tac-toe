@@ -60,9 +60,7 @@ export default function LoginPage() {
     }
     localStorage.setItem("username", username.trim());
 
-    // In real app, validate room exists via API here before navigating
     setLoading(e=>({...e,join:true}))
-    const response = await gameService.joinRoom(joinRoomId,username.trim());
     router.push(`/game/${joinRoomId.trim()}`);
   }
 

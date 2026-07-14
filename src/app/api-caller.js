@@ -137,6 +137,16 @@ class GameService {
     await this.connection.invoke("AutoMoveIfNotChose", roomId,player);
   }
 
+  async playAgain(roomId) {
+    if (!this.roomId) throw new Error("Join or create a room first.");
+
+    if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
+      throw new Error("Cannot restart game: SignalR is not connected.");
+    }
+
+    await this.connection.invoke("PlayAgain", roomId);
+  }
+
   on(eventName, callback) {
     this.eventHandlers[eventName] = callback;
   }
