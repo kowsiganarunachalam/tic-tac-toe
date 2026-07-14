@@ -32,8 +32,8 @@ export default function Tile({ value, onClick, player }) {
                  rounded-lg border border-black cursor-pointer select-none
                  relative overflow-hidden transition-colors duration-500 ease-in-out"
       style={{
-        width: "100px",
-        height: "100px",
+        width: "100%",
+        aspectRatio: "1 / 1",
         borderRadius: "10px",
         color: "black",
         backgroundColor:
@@ -44,7 +44,7 @@ export default function Tile({ value, onClick, player }) {
             : !value && hover
             ? "#FFC107"
             : "yellow",
-        fontSize: "40px",
+        fontSize: "clamp(32px, 10vw, 40px)",
         userSelect: "none",
       }}
     >

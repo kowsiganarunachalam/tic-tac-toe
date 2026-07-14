@@ -2,8 +2,10 @@
 import { useEffect, useRef, useState } from "react";
 
 export default function PlayerSquare({
+  className = "",
   name,
   active,
+  symbol,
   duration = 8000,
   warningThreshold = 0.25,
   onTimeout,
@@ -15,7 +17,7 @@ export default function PlayerSquare({
     let frameId;
     let start;
 
-    if (active) {
+    if (active && name) {
       start = performance.now();
 
       function frame(t) {
@@ -57,7 +59,7 @@ export default function PlayerSquare({
     }
 
     return () => cancelAnimationFrame(frameId);
-  }, [active, duration, warningThreshold, onTimeout]);
+  }, [active, duration, warningThreshold, onTimeout, name]);
 
   // player initials
   const initials =
@@ -72,12 +74,14 @@ export default function PlayerSquare({
 
   return (
     <div
+      className={className}
       ref={borderRef}
+      aria-label={`${name || "Waiting player"} timer`}
       style={{
         "--c": "limegreen",
         position: "relative",
-        width: "220px",
-        height: "220px",
+        width: "clamp(96px, 28vw, 220px)",
+        height: "clamp(96px, 28vw, 220px)",
         borderRadius: "15px",
         display: "flex",
         alignItems: "center",
@@ -90,20 +94,28 @@ export default function PlayerSquare({
     >
       <div
         style={{
-          width: "200px",
-          height: "200px",
+          width: "calc(100% - 20px)",
+          height: "calc(100% - 20px)",
           borderRadius: "10px",
-          background: "rebeccapurple",
+          background: active ? "#4f2f83" : "#5f5f6f",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontSize: "90px",
           color: "white",
           fontWeight: "bold",
           flexDirection: "column",
+          gap: "4px",
+          textAlign: "center",
+          padding: "8px",
         }}
       >
-        <div>{initials}</div>
+        <div style={{ fontSize: "clamp(28px, 8vw, 80px)", lineHeight: 1 }}>
+          {initials || "..."}
+        </div>
+        <div style={{ fontSize: "clamp(12px, 3vw, 18px)", lineHeight: 1.1 }}>
+          {symbol ? `${symbol} - ` : ""}
+          {active ? `${remaining}s` : "Ready"}
+        </div>
       </div>
     </div>
   );

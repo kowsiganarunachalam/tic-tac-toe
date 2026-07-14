@@ -4,7 +4,15 @@ import Tile from "./Tile"
 
 export default function Grid({ tiles, onTileClick,player }) {
     return (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 100px)", gap: "4px" }}>
+        <div
+            style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, minmax(72px, 100px))",
+                gap: "4px",
+                width: "min(100%, 312px)",
+                justifyContent: "center",
+            }}
+        >
             {
                 tiles.map((value, index) => {
                     const row = Math.floor(index / 3);
